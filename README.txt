@@ -32,7 +32,8 @@ regenerate poller configuration in centreon
 Central installation :
 
 cd /tmp
-git clone https://github.com/emaintenance/FTP_config_transfert/CFX
+git clone https://github.com/emaintenance/FTP_config_transfert.git
+cd FTP_config_transfert
 cd CFX
 bash CFX_install.sh
 
@@ -40,6 +41,7 @@ bash CFX_install.sh
 Poller installation : 
 
 cd /tmp
-git clone https://github.com/emaintenance/FTP_config_transfert/PFX
+git clone https://github.com/emaintenance/FTP_config_transfert.git
+cd FTP_config_transfert
 cd PFX
 bash PFX_install.sh
