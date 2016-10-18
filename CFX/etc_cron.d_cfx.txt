@@ -1,0 +1,13 @@
+MAILTO=""
+
+##### Cron d'integration des Pollers Distant #####
+*/2 * * * * nagios /usr/local/cfx/CFX_reception_nagios.sh >> /var/log/cfx/CFX_reception_nagios.log 2>&1
+
+##### Rotation des Log Nagios #####
+0 0 * * *      nagios /usr/local/cfx/CFX_LogRotate-Poller.sh >> /var/log/cfx/CFX_LogRotate-Poller.log 2>&1
+
+##### Rotation des Log CFX #####
+0 5 * * *      root /usr/local/cfx/CFX_log_rotation.sh > /dev/null 2>&1
+
+##### Mise a jour des droits CFG #####
+8 */2 * * *     /usr/local/cfx/CFX_regen_annuaire.sh  > /dev/null 2>&1

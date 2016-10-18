@@ -1,0 +1,107 @@
+#!/bin/sh
+#
+# chkconfig: 345 99 01
+# description: PFX_get_local_cmd Deplace des commandes nagios de Central.cmd a nagios.cmd
+
+DAEMON=/usr/local/nagios/var/PFX_get_local_cmd.sh
+DAEMON=/usr/local/cfx/PFX_get_local_cmd.sh
+USER=nagios
+. /etc/init.d/functions
+
+pids=0
+
+get_pid()
+{
+                pids=$(ps aux | grep $DAEMON | grep -v grep | awk '{print $2}')
+}
+
+start()
+{
+        get_pid
+        echo -n "Starting `basename $DAEMON`"
+
+        if [ -z "$pids" ]
+        then
+                #pids=`$DAEMON >> DAEMON.log 2>&1 & echo $!`
+                #daemon --user=$USER $DAEMON >> DAEMON.log
+                runuser -l nagios -c "$DAEMON >> DAEMON.log 2>&1 &"
+                get_pid
+                if [ -z "$pids" ]
+                then
+                        echo_failure
+                else
+                        echo -n " PID=$pids"
+                        echo_success
+                fi
+
+        else
+                echo -n " Already running PID=$pids"
+                echo_failure
+
+        fi
+echo ""
+}
+
+stop()
+{
+        get_pid
+        echo -n "Stopping `basename $DAEMON`"
+
+        if [ -z "$pids" ]
+        then
+                echo -n " Already stopping"
+                echo_failure
+        else
+                echo -n " PID=$pids"
+                kill $pids
+                get_pid
+                if [ -z "$pids" ]
+                then
+                        echo_success
+                else
+                        echo_failure
+                fi
+        fi
+echo ""
+}
+
+status()
+{
+        get_pid
+
+                if [ -z "$pids" ]
+                then
+                        echo -n "`basename $DAEMON` is NOT running"
+                else
+                        echo -n "`basename $DAEMON` is running PID=$pids"
+                fi
+echo ""
+}
+
+
+# See how we were called.
+case "$1" in
+
+        start)
+                                start
+                ;;
+
+        stop)
+                                stop
+                ;;
+
+        status)
+                status
+                ;;
+
+        restart)
+                stop
+                start
+                ;;
+
+        *)
+                echo "Usage: $0 {start|stop|restart|status}"
+                exit 1
+                ;;
+
+esac

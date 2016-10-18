@@ -1,0 +1,66 @@
+
+
+##### algorithm envoi_cmd #####
+
+open pipe [centreon]/centcore.cmd
+while running
+	read pipe
+		IF contain QUITCMD THEN exit
+		EL IF contain VALIDCMD THEN write VALICMD in validcmd file
+		ELSE 
+			read command
+			get poller name in [NUMPOLLER]/ndomod.cfg
+			write command in [POLLERNAME].cmd
+		
+
+##### algorithm reception_nagios #####
+
+FOR EACH FILE in [nagioslog]
+	read NUMPOLLER in file
+	cpoy file in [NUMPOLLER]/nagios.log
+	delete file
+FOR EACH FILE in [service-perfdata]
+	read NUMPOLLER in file
+	cpoy file in [NUMPOLLER]/service-perfdata.log
+	copy file in [NAGIOS]/var/service-perfdata
+	delete file
+	
+	
+##### algorithm regen_annuaire #####
+
+get last NUMPOLLER in [nagiosCFG]
+get last NUMPOLLER in correspondance file
+IF NOT EQUAL
+	run annuaire_conf
+	run Update-all-Poller
+	change access rights on [nagiosCFG]
+	
+	
+##### algorithm annuaire_conf #####
+
+get last NUMPOLLER in [nagiosCFG]
+delete correspondance file
+FOREACH [nagiosCFG]/[NUMPOLLER]
+	get pollername in [nagiosCFG]/[NUMPOLLER]/Poller-Conf
+	add pollername in new line in  correspondance file
+add timestamp at the end of correspondance file
+
+
+##### algorithm Update-all-Poller #####
+
+FOREACH [nagiosCFG]/[NUMPOLLER]
+	add scipts sh
+	change access rights on folder
+	
+	
+##### algorithm get_local_cmd #####
+
+get local poller name
+while running
+	IF file CENTRAL.cmd exist
+		IF contain REALOD THEN reload nagios
+		IF contain RESTART THEN restart nagios
+		copy CENTRAL.cmd in nagios.cmd
+		delete CENTRAL.cmd
+		wait 10 sec
+		

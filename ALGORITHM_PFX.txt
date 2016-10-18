@@ -1,0 +1,45 @@
+
+
+##### algorithm pfxd #####
+
+while running
+	every 5 seconds
+		run get_command
+	every 2 minutes
+		run send_data
+	every hours
+		run log_rotation
+
+
+##### algorithm get_command ##### 
+
+download file POLLER.cmd in FTP
+IF POLLER.cmd exist
+	IF POLLER.cmd contains NEWCONF THEN run get_config
+	IF POLLER.cmd contains RELOAD THEN run nagios service reload
+	IF POLLER.cmd contains RESTART THEN run nagios service restart
+	COPY POLLER.cmd IN NAGIOS.cmd
+	REMOVE POLLER.cmd
+	
+	
+#####  algorithm get_config ##### 
+
+download correspondance file
+get poller's number in correspondance file
+download folder called with the number in FTP, into [nagios]/etc
+restart nagios
+
+
+##### algorithm get_update #####
+
+download pfx.tar.gz
+	untar file into [pfx]
+
+	
+##### algorithm send_data #####
+
+get poller's number in correspondance file
+generate nagios log
+upload nagios log in FTP
+upload perfdata in FTP
+

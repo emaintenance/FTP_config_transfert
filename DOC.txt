@@ -1,0 +1,103 @@
+# THIS IS PROVIDED "AS IS", WITHOUT ANY WARRANTY, AND WITHOUT ANY SUPPORT. 
+# LICENSE : CC-BY-SA 3.0 - http://creativecommons.org/licenses/by-sa/3.0/ 
+# Central File eXchange / Poller File eXchange
+# Test with CentOS 6 / Centreon 2.6 / Nagios 3.5.1
+# Scripts to tranfert Nagios configuration in FTP
+
+CFX/PFX scripts allow using FTP exchange between Centreon server and pollers servers, instead of SSH.
+Centreon server is FTP server and Pollers are FTP client (with SSH, Central is connecting to poller).
+This design, permit to prevent all acces from outside of poller.
+
+Instlation steps on Centreon.
+- install FTP server 
+- configure nagios-configuration-folder as FTP share folder
+- disable centcore
+- add CFX folders scripts
+- add CFX deamon and cron
+
+Instalation steps on Poller
+- add PFX foldes scripts
+- add PFX deamon and cron
+
+Configuration
+- add Poller-Conf file in nagios configuration folder on Central and Poller
+- add AutoConfPFX.sh in nagios configuration folder
+
+regenerate poller configuration in centreon
+
+-----
+
+Instalation Centreon
+
+
+# VSFTP
+yum install vsftpd
+Edit /etc/vsftpd/vsftpd.conf :
+
+local_root=/usr/local/centreon/filesGeneration/nagiosCFG
+
+# centcore
+chkconfig centcore off
+/etc/init.d/centcore stop
+
+#CFX
+
+mkdir -p /usr/local/cfx
+mv /tmp/cfx/* /usr/local/cfx/
+chmod +x /usr/local/cfx/*
+chmod 777 /usr/local/cfx/*
+dos2unix /usr/local/cfx/*
+
+cd /usr/local/cfx/
+cp CFX_cmd /etc/init.d/
+/etc/init.d/CFX_cmd start
+chkconfig CFX_cmd on
+
+mkdir -p /var/log/cfx/
+chown -R nagios.nagios /var/log/cfx/
+chmod -R 777  /var/log/cfx/
+dos2unix /usr/local/cfx/*
+
+cp /tmp/getcmd /etc/init.d/getcmd
+chmod +x /etc/init.d/getcmd
+/etc/init.d/getcmd start
+chkconfig getcmd on
+
+-----
+
+Instaltion Poller
+
+cd /tmp 
+tar -zxvf pfx*.tar.gz 
+rm -rf /usr/local/pfx/* 
+mv -f pfx/ /usr/local/ 
+mkdir -p /usr/local/pfx/{lib,log,utils,tmp} 
+chmod +x /usr/local/pfx/* 
+cp /usr/local/pfx/PFX_get_update.sh 
+/usr/local/nagios/PFX_get_update.sh
+
+chown -R nagios.nagios /var/log/pfx 
+chown -R nagios.nagios /usr/local/pfx
+
+cp /usr/local/pfx/pfx /etc/init.d/
+chkconfig pfx on
+
+
+-----
+
+Configuration Poller
+
+vim /usr/local/nagios/etc/Poller-Conf
+POLLERNAME=pollername
+CENTRALIP=1.1.1.1
+
+POLLERNAME is poller name in Centreon
+CENTRALIP is Centreon IP address
+
+Start poller :
+/etc/init.d/pfx stop
+/etc/init.d/pfx install
+
+
+
+

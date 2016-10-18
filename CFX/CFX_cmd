@@ -1,0 +1,91 @@
+#!/bin/bash
+#########################################################################
+# THIS IS PROVIDED "AS IS", WITHOUT ANY WARRANTY, AND WITHOUT ANY SUPPORT. 
+# LICENSE : CC-BY-SA 3.0 - http://creativecommons.org/licenses/by-sa/3.0/ 
+# CFX Central File eXchange
+# Test with CentOS 6 / Centreon 2.6 / Nagios 3.5.1
+# Scripts to tranfert Nagios configuration in FTP
+#########################################################################
+# Script de demarrage du programme de generation des commandes externe de Centreon
+# Auteur        : C.TRIOMPHE AKKA
+# Version       : 1.0
+# Date          : 08/08/2013
+#########################################################################
+# Ajout au demarrage du serveur - Matthieu PERRIN (OAB) - Octobre 2014
+# chkconfig: 345 99 01
+# description: Script de demarrage du programme de generation des commandes externe de Centreon
+#########################################################################
+# Modification en CFX - Matthieu PERRIN (OAB) - Juin 2016
+
+
+if [ "$1" = "" ]; then
+echo "Usage de ce lanceur
+$0 start | stop | restart | console | debug"
+fi
+
+ETATSVC=$(/bin/ps aux | /bin/grep CFX_envoi_cmd.sh | /bin/grep -v grep | /usr/bin/wc -l)
+
+start()
+{
+
+case $ETATSVC in
+        0)
+				mkdir -p /var/log/cfx/
+                /usr/local/cfx/CFX_envoi_cmd.sh > /var/log/cfx/CFX_envoi_cmd.log &
+                chown nagios.nagios /var/log/cfx/CFX_envoi_cmd.log
+                ;;
+        *)
+                stop
+                /usr/local/cfx/CFX_envoi_cmd.sh > /var/log/cfx/CFX_envoi_cmd.log &
+                chown nagios.nagios /var/log/cfx/CFX_envoi_cmd.log
+                ;;
+esac
+echo "Demarrage du service de transmission de commande Centreon => OK"
+}
+
+stop()
+{
+echo QUITCMD > /var/lib/centreon/centcore.cmd
+ETATSVC=$(/bin/ps aux | /bin/grep CFX_envoi_cmd.sh | /bin/grep -v grep | /usr/bin/wc -l)
+
+case $ETATSVC in
+        0)
+                echo "Arret du service de transmission des commandes Centreon => OK"
+                ;;
+        *)
+                echo "De multiple instance en cours, arret de l'ensemble des intances"
+                /usr/bin/killall -e CFX_envoi_cmd.sh
+                echo "Arret Forcé => OK"
+                ;;
+esac
+ETATSVC="0"
+sleep 1
+mv -f /var/log/cfx/CFX_envoi_cmd.log /var/log/cfx/CFX_envoi_cmd.log.1
+}
+
+console()
+{
+/usr/bin/tail -f /var/log/cfx/CFX_envoi_cmd.log
+}
+
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        restart)
+                stop
+                start
+                ;;
+        console)
+                console
+                ;;
+        debug)
+                stop
+                start
+                console
+                ;;
+esac
+exit $?
