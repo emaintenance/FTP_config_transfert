@@ -57,8 +57,8 @@ add_user_pfx()
 disable_cron()
 {
 	echo "Disable old cron AND install update in root"
-	echo -e 'MAILTO=drop.moi@edf.fr\n3 2 * * 1 root /etc/init.d/pfx restart\n8 * * * * root [ $(pgrep pfxd | wc -l) -eq 0 ] && /etc/init.d/pfx start\n* * * * * root [ -f /tmp/update_pfx ] && /usr/local/nagios/PFX_get_update.sh >> /var/log/pfx/PFX_get_update.log\n' > /etc/cron.d/eMaint.poller
-	echo "MAILTO=drop.moi@edf.fr" > /etc/cron.d/eMaint.relay
+	echo -e 'MAILTO=\"\"\n3 2 * * 1 root /etc/init.d/pfx restart\n8 * * * * root [ $(pgrep pfxd | wc -l) -eq 0 ] && /etc/init.d/pfx start\n* * * * * root [ -f /tmp/update_pfx ] && /usr/local/nagios/PFX_get_update.sh >> /var/log/pfx/PFX_get_update.log\n' > /etc/cron.d/eMaint.poller
+	echo "MAILTO=\"\"" > /etc/cron.d/eMaint.relay
 }
 
 # TODO
