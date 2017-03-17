@@ -27,4 +27,5 @@ if [ $nb -ne $max ]; then
         chown nagios.nagios * -R ${nagiosCFG}/transfert/AutoConf-Poller/
         chown nagios.nagios * -R ${nagiosCFG}/
         chmod 777 * -R ${nagiosCFG}/
+		chown nagios.nagios -R /var/lib/centreon/log/*
 fi
