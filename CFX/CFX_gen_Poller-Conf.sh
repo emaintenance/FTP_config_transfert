@@ -14,12 +14,24 @@ cfx=/usr/local/cfx
 
 CentreonDir=$(cat ${centreon_config} | grep CentreonDir | cut -d'=' -f 2 |  cut -d '"' -f 2)
 nagiosCFG=${CentreonDir}/filesGeneration/nagiosCFG
+eMaintCFG=${CentreonDir}/filesGeneration/eMaintCFG
+brokerCFG=${CentreonDir}/filesGeneration/broker
 
-[ -f ${nagiosCFG}/${numpoller}/ndomod.cfg ] || echo "${nagiosCFG}/$1/ndomod.cfg not present"
+moduleXML=poller-module.xml
+
 [ -f ${nagiosCFG}/${numpoller}/Poller-Conf ] && echo "${nagiosCFG}/${numpoller}/Poller-Conf already present" && exit 1
 
-pollername=$(cat ${nagiosCFG}/${numpoller}/ndomod.cfg  | grep instance_name | cut -d '=' -f 2)
-centralip=$(cat ${nagiosCFG}/${numpoller}/ndomod.cfg  | grep "output=" | cut -d '=' -f 2)
+if [ -f ${nagiosCFG}/${numpoller}/ndomod.cfg ]; then
+    pollername=$(cat ${nagiosCFG}/${numpoller}/ndomod.cfg  | grep instance_name | cut -d '=' -f 2)
+    centralip=$(cat ${nagiosCFG}/${numpoller}/ndomod.cfg  | grep "output=" | cut -d '=' -f 2)
+fi
+
+	#moduleXML=$( cat $nagiosCFG/${numpoller}/centengine.cfg | grep cbmod | rev | cut -d"/" -f1 | rev)
+if [ -f  ${brokerCFG}/${numpoller}/${moduleXML}  ]; then
+    pollername=$(cat ${brokerCFG}/${numpoller}/${moduleXML} | grep instance_name | sed 's,<instance_name>,,g; s,</instance_name>,,g; s,CDATA,,g' | sed 's/[^a-zA-Z0-9_\-]//g' | tr -d  ' ')
+    centralip=$(cat ${brokerCFG}/${numpoller}/${moduleXML} | grep host | sed 's,<host>,,g; s,</host>,,g; s,CDATA,,g' | sed 's/[^a-zA-Z0-9_\-]//g' | tr -d  ' ')
+fi
+
 
 echo "POLLERNAME=${pollername}" >> ${nagiosCFG}/${numpoller}/Poller-Conf
 echo "CENTRALIP=${centralip}" >> ${nagiosCFG}/${numpoller}/Poller-Conf

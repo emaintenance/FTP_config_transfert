@@ -19,22 +19,19 @@
 # CFX_envoi_cmd.sh
 # Central File eXchange - 17 juin 2016 - Matthieu PERRIN
 
-centreon_config=/etc/centreon/conf.pm
-
-centcore=$(cat ${centreon_config} | grep cmdFile | cut -d'=' -f 2 |  cut -d '"' -f 2)
-CentreonDir=$(cat ${centreon_config} | grep CentreonDir | cut -d'=' -f 2 |  cut -d '"' -f 2)
-nagiosCFG=${CentreonDir}/filesGeneration/nagiosCFG
+nagiosCFG=/usr/local/centreon/filesGeneration/nagiosCFG
+brokerCFG=/usr/local/centreon/filesGeneration/broker
+eMaintCFG=/usr/local/centreon/filesGeneration/eMaintCFG
 
 #Variable de programme
 PGREP="/bin/grep"
 PCAT="/bin/cat"
 PCUT="/bin/cut"
- 
+
 #Creation du fichier de reception des commandes centreon
 creation_pipe()
 {
 pipe=/var/lib/centreon/centcore.cmd
-pipe=${centcore}
 rm -f $pipe
 trap "rm -f $pipe" EXIT
 
@@ -50,26 +47,30 @@ lance_boucle()
 {
 while true
 do
-	line=$($PCAT < $pipe )
-	case ${line[0]} in
+        line=$($PCAT < $pipe )
+        case ${line[0]} in
          QUITCMD)
-		echo "Demande de sortie du programme recu (QUITCMD)"
-		break
-		;;
+                echo "Demande de sortie du programme recu (QUITCMD)"
+                break
+                ;;
          VALIDCMD)
-		echo "Demande de validation de fonctionnement recu"
-		echo "VALIDCMDOK" > /tmp/validcmd
-		;;
-	  *)
-		if [ "${#line[*]}" -ne "0" ]; then
-			echo "$line" | (while read ligne
-			do
-				prepareligne
-			done)
-		
-		fi
-		;;
-	esac
+                echo "Demande de validation de fonctionnement recu"
+                echo "VALIDCMDOK" > /tmp/validcmd
+                ;;
+          *)
+                if [ "${#line[*]}" -ne "0" ]; then
+                        echo "$line" | (while read ligne
+                        do
+
+							if [ $(echo $ligne | wc -c) -gt 8 ]; then
+                                prepareligne
+							fi
+
+                        done)
+
+                fi
+                ;;
+        esac
 
 done
 }
@@ -80,16 +81,26 @@ prepareligne()
 TYPECMD=$(echo $ligne | $PCUT -d ":" -f1)
 POLLER=$(echo $ligne | $PCUT -d ":" -f2)
 if [ "$POLLER" = "" ]; then
-	echo -e "Une erreur de traitement a eu lieu!!!\nla commande suivante n a pas pu etre traitee car l ID du poller est absente\n\n-------------- $ligne --------------\n\n"	
+        echo -e "Une erreur de traitement a eu lieu!!!\nla commande suivante n a pas pu etre traitee car l ID du poller est absente\n\n-------------- $ligne --------------\n\n"
 else
-	POLLERNAME=$($PCAT ${nagiosCFG}/$POLLER/ndomod.cfg | $PGREP "instance_name" | $PCUT -d "=" -f2)
-	if [ $TYPECMD ==  "EXTERNALCMD" ]; then
-		CMD=$(echo $ligne | $PCUT -d ":" -f3)	
-	fi
-	
+		#POLLERNAME=$POLLER
+		if [ -f  ${nagiosCFG}/$POLLER/ndomod.cfg ]; then
+			POLLERNAME=$($PCAT ${nagiosCFG}/$POLLER/ndomod.cfg | $PGREP "instance_name" | $PCUT -d "=" -f2)
+		fi
+		# Ajout 30-03-17
+		if [ -f  ${brokerCFG}/$POLLER/poller-module.xml  ]; then
+			#POLLERNAME=$(cat ${brokerCFG}/${POLLER}/poller-module.xml | grep instance_name | sed 's,<instance_name>,,g; s,</instance_name>,,g; s,CDATA,,g' | sed 's/[^a-z -_A-Z]//g' | tr -d  ' ')
+			POLLERNAME=$(cat ${brokerCFG}/${POLLER}/poller-module.xml | grep instance_name | sed 's,<instance_name>,,g; s,</instance_name>,,g; s,CDATA,,g' | sed 's/[^a-zA-Z0-9_\-]//g' | tr -d  ' ')
+		fi
+        if [ $TYPECMD == "EXTERNALCMD" ]; then
+                CMD=$(echo $ligne | $PCUT -d ":" -f3)
+
+        fi
+
         # Ajout MPE dec 2015
-        [ -f /usr/local/scripts/ajout_lien_heat.sh ] && CMD=$(/usr/local/scripts/ajout_lien_heat.sh "$CMD")
-	traiteligne
+        [ -f /usr/local/scripts/ajout_lien_heat2.sh ] && CMD="$(/usr/local/scripts/ajout_lien_heat2.sh "$CMD")"
+
+        traiteligne
 fi
 }
 
@@ -100,27 +111,37 @@ traiteligne()
 touch ${nagiosCFG}/transfert/$POLLERNAME.cmd
 chown nagios.nagios ${nagiosCFG}/transfert/$POLLERNAME.cmd
 
-	case $TYPECMD in
-		EXTERNALCMD)
-			echo "$CMD" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
-			;;
-		RESTART)
-			echo "RESTART" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
-			;;
-		RELOAD)
-			echo "RELOAD" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
-			;;
-		SENDCFGFILE)
-			echo "$(date)" > ${nagiosCFG}/$POLLER/lastupdate
-			echo "NEWCONF" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
-			;;
-		*)
-			echo "Cette ligne de commande n'est pas traité"
-			echo $TYPECMD":"$POLLER":"$CMD 
-			;;
-	esac
+        case $TYPECMD in
+                EXTERNALCMD)
+                        echo "$CMD" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
+						echo "$CMD" >> /var/log/cfx/command
+                        ;;
+                RESTART)
+                        echo "RESTART" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
+                        ;;
+                RELOAD)
+                        echo "RELOAD" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
+                        ;;
+                SENDCFGFILE)
+                        # Ajout 19-11-16 centreon-engine configuration
+                        cp -f ${brokerCFG}/$POLLER/* ${nagiosCFG}/$POLLER/
+						# Ajout 30-03-17 eMaintenance configuration
+                        yes no | cp -i ${eMaintCFG}/$POLLER/* ${nagiosCFG}/$POLLER/  > /dev/null  2>&1
+						
+						# Poller en NDO : supprime incompatible nagios
+						[ ! -f ${brokerCFG}/${POLLER}/poller-module.xml ] && sed -i '/timezone/d; /hostgroup_id/d; /servicegroup_id/d' ${nagiosCFG}/${POLLER}/*cfg
+						
+                        echo "$(date)" > ${nagiosCFG}/$POLLER/lastupdate
+                        echo "NEWCONF" >> ${nagiosCFG}/transfert/$POLLERNAME.cmd
+                        ;;
+                *)
+                        echo "Cette ligne de commande n'est pas traité"
+                        echo $TYPECMD":"$POLLER":"$CMD
+                        ;;
+        esac
 }
 
 # Programme
 creation_pipe
 lance_boucle
+

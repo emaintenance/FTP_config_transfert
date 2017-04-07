@@ -16,7 +16,12 @@ centreon_config=/etc/centreon/conf.pm
 
 CentreonDir=$(cat ${centreon_config} | grep CentreonDir | cut -d'=' -f 2 |  cut -d '"' -f 2)
 cfgdir=${CentreonDir}/filesGeneration/nagiosCFG
-PATH_VAR=$(cat ${cfgdir}/1/nagios.cfg | grep "service_perfdata_file=" | cut -d "=" -f 2 | sed "s,/service-perfdata,,g")
+brokerCFG=${CentreonDir}/filesGeneration/broker
+eMaintCFG=${CentreonDir}/filesGeneration/eMaintCFG
+#PATH_VAR=$(cat ${cfgdir}/1/nagios.cfg | grep "service_perfdata_file=" | cut -d "=" -f 2 | sed "s,/service-perfdata,,g")
+PATH_VAR=/usr/local/nagios/var
+
+moduleXML=poller-module.xml
 
 nom=Central
 cmdfile=${PATH_VAR}/nagios.cmd
@@ -31,6 +36,7 @@ get_var()
 for FILEB in $(ls -1 $cfgdir/ | grep ^[0-9] | grep -v '[[:alpha:]]')
   do
 
+	if [ -f $cfgdir/$FILEB/ndomod.cfg ]; then
         central=$(grep 127.0.0.1 $cfgdir/$FILEB/ndomod.cfg | wc -l)
 
         #test Si c'est le poller local
@@ -40,6 +46,22 @@ for FILEB in $(ls -1 $cfgdir/ | grep ^[0-9] | grep -v '[[:alpha:]]')
                         nom=$(grep instance_name $cfgdir/$FILEB/ndomod.cfg | cut -d"=" -f2)
                         cmdfile=$(grep command_file $cfgdir/$FILEB/nagios.cfg | cut -d"=" -f 2)
         fi
+	fi
+	
+	#Ajout avril 2017
+	#moduleXML=$( cat $cfgdir/$FILEB/centengine.cfg | grep cbmod | rev | cut -d"/" -f1 | rev)
+	if [ -f ${brokerCFG}/$FILEB/${moduleXML} ]; then
+		central=$(grep 127.0.0.1 ${brokerCFG}/$FILEB/${moduleXML} | wc -l)
+		
+        #test Si c'est le poller local
+        if [ $central -gt 0 ]
+        then
+                        # recupere le nome du poller et l'emplcaement de nagios.cmd
+						nom=$(cat ${brokerCFG}/${numpoller}/${moduleXML} | grep instance_name | sed 's,<instance_name>,,g; s,</instance_name>,,g; s,CDATA,,g' | sed 's/[^a-zA-Z0-9_\-]//g' | tr -d  ' ')
+                        cmdfile=$(grep command_file $cfgdir/$FILEB/centengine.cfg | cut -d"=" -f 2)						
+		
+		fi
+	fi
   done
 }
 
