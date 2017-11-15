@@ -27,7 +27,7 @@ do
         fi
         # Ajout 30-03-17
         if [ -f  ${brokerCFG}/$i/poller-module.xml  ]; then
-                name=$(cat ${brokerCFG}/${i}/poller-module.xml | grep instance_name | sed 's,<instance_name>,,g; s,</instance_name>,,g; s,CDATA,,g' | sed 's/[^a-z -_A-Z]//g' | tr -d  ' ')
+                name=$(cat ${brokerCFG}/${i}/poller-module.xml | grep instance_name | sed 's,<instance_name>,,g; s,</instance_name>,,g; s,CDATA,,g' | sed 's/[^a-z -_A-Z 0-9]//g' | tr -d  ' ')
         fi
         echo $name >> $correspondance
 
